@@ -1,6 +1,16 @@
+To make the application flexible in terms of displaying information to the user, we can introduce an abstract base class for user views. Concrete implementations of this base class can define how to render the data (e.g., console output). Here's the modified code:
+
+1. Define the abstract base class `UserView`.
+2. Create a concrete class `ConsoleUserView` that implements the `UserView` interface for console output.
+3. Refactor the main function to use the `UserView` class.
+
+Let's start by defining the abstract base class and the concrete implementation:
+
+```python
 from datetime import datetime, timedelta, date
 import re
 import pickle
+from abc import ABC, abstractmethod
 
 class Field:
     def __init__(self, value):
@@ -191,6 +201,31 @@ def birthdays(args, book: AddressBook):
         return "No upcoming birthdays in the next week."
     return "\n".join([f"{record['name']}: {record['congratulation_date'].strftime('%d.%m.%Y')}" for record in upcoming_birthdays])
 
+class UserView(ABC):
+    @abstractmethod
+    def display_message(self, message):
+        pass
+
+    @abstractmethod
+    def display_contacts(self, contacts):
+        pass
+
+    @abstractmethod
+    def display_birthdays(self, birthdays):
+        pass
+
+class ConsoleUserView(UserView):
+    def display_message(self, message):
+        print(message)
+
+    def display_contacts(self, contacts):
+        for contact in contacts:
+            print(contact)
+
+    def display_birthdays(self, birthdays):
+        for birthday in birthdays:
+            print(f"{birthday['name']}: {birthday['congratulation_date'].strftime('%d.%m.%Y')}")
+
 def parse_input(user_input):
     parts = user_input.split(maxsplit=1)
     command = parts[0]
@@ -200,54 +235,45 @@ def parse_input(user_input):
 def main():
     try:
         book = AddressBook.deserialize("address_book.pkl")
-        print("Address book loaded successfully.")
+        view = ConsoleUserView()
+        view.display_message("Address book loaded successfully.")
     except FileNotFoundError:
         book = AddressBook()
-        print("No existing address book found. Creating a new one.")
+        view = ConsoleUserView()
+        view.display_message("No existing address book found. Creating a new one.")
 
-    print("Welcome to the assistant bot!")
+    view.display_message("Welcome to the assistant bot!")
     while True:
         user_input = input("Enter a command: ")
         command, args = parse_input(user_input)
 
         if command in ["close", "exit"]:
             book.serialize("address_book.pkl")
-            print("Address book saved successfully.")
-            print("Good bye!")
+            view.display_message("Address book saved successfully.")
+            view.display_message("Good bye!")
             break
 
         elif command == "hello":
-            print("How can I help you?")
+            view.display_message("How can I help you?")
 
         elif command == "add":
-            print(add_contact(args, book))
+            view.display_message(add_contact(args, book))
 
         elif command == "change":
-            print(change_phone(args, book))
+            view.display_message(change_phone(args, book))
 
         elif command == "phone":
-            print(show_phone(args, book))
+            view.display_message(show_phone(args, book))
 
         elif command == "all":
-            print(show_all_contacts(args, book))
+            contacts = show_all_contacts(args, book)
+            view.display_contacts(contacts.split('\n'))
 
         elif command == "add-birthday":
-            print(add_birthday(args, book))
+            view.display_message(add_birthday(args, book))
 
         elif command == "show-birthday":
             if not args:
-                print("Please provide a name.")
+                view.display_message("Please provide a name.")
             else:
-                print(show_birthday(args, book))
-
-        elif command == "birthdays":
-            if len(args) != 1:
-                print("Please provide a name.")
-            else:
-                print(birthdays(args, book))
-
-        else:
-            print("Invalid command.")
-
-if __name__ == "__main__":
-    main()
+                view
